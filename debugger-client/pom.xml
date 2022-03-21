@@ -9,12 +9,19 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.terminus.debugger.client</groupId>
     <artifactId>debugger-client</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>io.terminus.debugger</groupId>
+            <artifactId>debugger-common</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

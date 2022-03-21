@@ -9,7 +9,6 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.terminus.debugger.common</groupId>
     <artifactId>debugger-common</artifactId>
 
     <properties>

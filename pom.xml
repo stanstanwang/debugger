@@ -27,7 +27,30 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <debugger.version>0.0.1-SNAPSHOT</debugger.version>
     </properties>
+
+    <dependencyManagement>
+
+        <dependencies>
+            <dependency>
+                <groupId>io.terminus.debugger</groupId>
+                <artifactId>debugger-common</artifactId>
+                <version>${debugger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.terminus.debugger</groupId>
+                <artifactId>debugger-client</artifactId>
+                <version>${debugger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.terminus.debugger</groupId>
+                <artifactId>debugger-server</artifactId>
+                <version>${debugger.version}</version>
+            </dependency>
+        </dependencies>
+
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
