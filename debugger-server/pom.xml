@@ -16,4 +16,13 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>io.terminus.debugger</groupId>
+            <artifactId>debugger-common</artifactId>
+        </dependency>
+    </dependencies>
+
+
+
 </project>
