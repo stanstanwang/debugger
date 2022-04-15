@@ -1,11 +1,19 @@
 package io.terminus.debugger.client.core;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
 /**
  * @author stan
  * @date 2022/4/7
  */
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "terminus.localdebug")
 public class DebugClientProperties {
-
     /**
      * 当前debug功能是否开启
      */
@@ -22,42 +30,15 @@ public class DebugClientProperties {
     /**
      * 隧道服务
      */
-    private String tunnelHost;
+    private String serverHost = "127.0.0.1";
 
     /**
-     * 隧道服务对应的端口
+     * http服务的端口
      */
-    private int tunnelPort;
+    private int httpPort = 8080;
 
-    public boolean isEnable() {
-        return enable;
-    }
-
-    public void setEnable(boolean enable) {
-        this.enable = enable;
-    }
-
-    public boolean isLocal() {
-        return local;
-    }
-
-    public void setLocal(boolean local) {
-        this.local = local;
-    }
-
-    public String getTunnelHost() {
-        return tunnelHost;
-    }
-
-    public void setTunnelHost(String tunnelHost) {
-        this.tunnelHost = tunnelHost;
-    }
-
-    public int getTunnelPort() {
-        return tunnelPort;
-    }
-
-    public void setTunnelPort(int tunnelPort) {
-        this.tunnelPort = tunnelPort;
-    }
+    /**
+     * 隧道服务的端口，目前是 roscket 的实现
+     */
+    private int tunnelPort = 7000;
 }

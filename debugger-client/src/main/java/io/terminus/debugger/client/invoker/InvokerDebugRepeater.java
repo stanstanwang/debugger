@@ -2,24 +2,24 @@ package io.terminus.debugger.client.invoker;
 
 import io.terminus.debugger.client.core.DebugRepeater;
 import io.terminus.debugger.common.msg.InvokerTunnelMessage;
+import io.terminus.debugger.common.msg.InvokerTunnelResponse;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import reactor.core.publisher.Mono;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
  * @author stan
  * @date 2022/3/23
  */
-public class InvokerDebugRepeater implements DebugRepeater, ApplicationContextAware {
-
+public class InvokerDebugRepeater implements DebugRepeater<InvokerTunnelMessage, InvokerTunnelResponse>, ApplicationContextAware {
 
     private ApplicationContext ac;
 
 
-    public Object repeat(InvokerTunnelMessage message) {
+    public Mono<InvokerTunnelResponse> repeat(InvokerTunnelMessage message) {
         // 找到对应的 service 和 对应的方法
 
         String beanName = message.getBeanName();
@@ -30,14 +30,14 @@ public class InvokerDebugRepeater implements DebugRepeater, ApplicationContextAw
 
         // 直接反射执行
         // Class.class.getdeme
-        Method method = null;
+        /*Method method = null;
         try {
             return method.invoke(bean, null);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.printStackTrace();
-        }
+        }*/
         return null;
     }
 

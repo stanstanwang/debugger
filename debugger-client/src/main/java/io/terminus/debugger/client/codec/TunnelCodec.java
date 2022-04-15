@@ -9,7 +9,6 @@ package io.terminus.debugger.client.codec;
  */
 public interface TunnelCodec {
 
-
     byte[] encode(Object data);
 
     <T> T decode(byte[] data, Class<T> c);

@@ -4,7 +4,10 @@ import io.terminus.debugger.client.core.DebugClient;
 import io.terminus.debugger.client.core.DebugClientProperties;
 import io.terminus.debugger.client.core.DebugInterceptor;
 import io.terminus.debugger.client.core.DebugKeyContext;
-import io.terminus.debugger.common.msg.TunnelMessage;
+import io.terminus.debugger.common.msg.HttpTunnelMessage;
+import io.terminus.debugger.common.msg.HttpTunnelResponse;
+import lombok.SneakyThrows;
+import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -12,7 +15,10 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
 
 import static io.terminus.debugger.client.core.DebugKeyContext.DEBUG_KEY;
 
@@ -75,14 +81,77 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
 
 
     private void localDebug(HttpServletRequest request, HttpServletResponse response) {
-        // 将http请求转发给debugServer
-        TunnelMessage message = new TunnelMessage();
+        // 1. 将 http request 透传给隧道服务
+        HttpTunnelMessage tunnelMessage = convertRequest(request);
 
-        // 可以是http或者非http
-        Object object = debugClient.tunnelRequest(message);
+        // TODO stan 2022/4/12 这里得异步处理，避免阻塞http线程或者超时
+        // TODO stan 2022/4/13 超时异常的处理
+        // TODO stan 2022/4/13 执行失败的判断,
 
-        // 正常应该就是 proxy 的模式， 响应的应该就是 response
-        // response.w
+        // 2. 将 http response 响应给正常请求
+        debugClient.tunnelRequest(tunnelMessage, HttpTunnelResponse.class)
+                .timeout(Duration.ofSeconds(20))
+                .subscribe(r -> convertResponse(r, response))
+        ;
+    }
+
+
+    /**
+     * 将 http 请求转化为隧道透传的请求
+     *
+     * @param request servlet 的 http 请求
+     */
+    @SneakyThrows
+    private HttpTunnelMessage convertRequest(HttpServletRequest request) {
+        HttpTunnelMessage tunnelMessage = new HttpTunnelMessage();
+        // TODO test stan 2022/4/12 getString() 的 验证
+        tunnelMessage.setUrl(request.getRequestURI());
+        tunnelMessage.setMethod(request.getMethod());
+        tunnelMessage.setHeaders(toHeaders(request));
+
+        // TODO test stan 2022/4/13 是否有可重复的需求
+        int contentLength = request.getContentLength();
+        ByteArrayOutputStream boas = new ByteArrayOutputStream(contentLength > 0 ?
+                contentLength : StreamUtils.BUFFER_SIZE);
+        StreamUtils.copy(request.getInputStream(), boas);
+        tunnelMessage.setBody(boas.toByteArray());
+        return tunnelMessage;
+    }
+
+
+    /**
+     * 将隧道响应的结果， 转换为 http 响应
+     *
+     * @param tunnelResponse 隧道响应的结果
+     * @param response       servlet 的 http 响应
+     */
+    @SneakyThrows
+    private void convertResponse(HttpTunnelResponse tunnelResponse, HttpServletResponse response) {
+        response.setStatus(tunnelResponse.getStatus());
+        tunnelResponse.getHeaders().forEach((k, vs) -> {
+            vs.forEach(v -> response.addHeader(k, v));
+        });
+        StreamUtils.copy(tunnelResponse.getBody(), response.getOutputStream());
+    }
+
+
+    private Map<String, List<String>> toHeaders(HttpServletRequest request) {
+        Map<String, List<String>> headers = new HashMap<>();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String key = headerNames.nextElement();
+            List<String> values = toCollection(request.getHeaders(key));
+            headers.put(key, values);
+        }
+        return headers;
+    }
+
+    private List<String> toCollection(Enumeration<String> values) {
+        List<String> list = new ArrayList<>(5);
+        while (values.hasMoreElements()) {
+            list.add(values.nextElement());
+        }
+        return list;
     }
 
 

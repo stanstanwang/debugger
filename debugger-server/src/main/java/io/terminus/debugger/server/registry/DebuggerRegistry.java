@@ -2,6 +2,7 @@ package io.terminus.debugger.server.registry;
 
 import io.terminus.debugger.common.registry.DebuggerInstance;
 import io.terminus.debugger.common.registry.GetInstanceRequest;
+import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
@@ -13,13 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author stan
  * @date 2022/4/7
  */
+@Component
 public class DebuggerRegistry {
 
 
     /**
      * 所有本地 debugger 注册到当前的数据，用内存方式存取
      */
-    private Map<String, DebuggerInstance> registryMap = new ConcurrentHashMap<>();
+    private final Map<String, DebuggerInstance> registryMap = new ConcurrentHashMap<>();
 
     /**
      * 将本地debugger实例注册进来

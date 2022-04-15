@@ -1,0 +1,6 @@
+server:
+  port: 8711
+spring:
+  application:
+    name: DebugClient
+debug: true

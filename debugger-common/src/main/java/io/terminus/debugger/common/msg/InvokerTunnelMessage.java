@@ -1,5 +1,6 @@
 package io.terminus.debugger.common.msg;
 
+import io.terminus.debugger.common.tunnel.RouteConstants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -22,5 +23,9 @@ public class InvokerTunnelMessage extends TunnelMessage {
 
     private Collection<Byte[]> parameters;
 
+    @Override
+    public String getRoute() {
+        return RouteConstants.HTTP_TUNNEL_HANDLE;
+    }
 
 }

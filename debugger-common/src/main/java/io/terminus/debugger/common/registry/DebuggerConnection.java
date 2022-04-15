@@ -25,6 +25,9 @@ public class DebuggerConnection {
                 .retrieveMono(Object.class);
     }
 
+    public RSocketRequester getRequester() {
+        return requester;
+    }
 
     // TODO stan 2022/4/7 toString 得响应对应到本地的连接
     @Override

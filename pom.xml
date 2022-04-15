@@ -22,6 +22,8 @@
         <module>debugger-common</module>
         <module>debugger-client</module>
         <module>debugger-server</module>
+        <module>debugger-client-starter</module>
+        <module>debugger-server-starter</module>
     </modules>
 
 
