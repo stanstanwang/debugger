@@ -3,7 +3,7 @@ package io.terminus.debugger.client.core;
 import io.terminus.debugger.common.msg.TunnelMessage;
 import io.terminus.debugger.common.msg.TunnelRequest;
 import io.terminus.debugger.common.msg.TunnelResponse;
-import io.terminus.debugger.common.registry.GetInstanceRequest;
+import io.terminus.debugger.common.registry.GetInstanceReq;
 import io.terminus.debugger.common.tunnel.RouteConstants;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -43,7 +43,7 @@ public class DebugClient implements ApplicationContextAware {
         // 准备请求
         TunnelRequest tunnelRequest = new TunnelRequest();
         tunnelRequest.setInstanceRequest(
-                new GetInstanceRequest(DebugKeyContext.get(), ac.getId())
+                new GetInstanceReq(DebugKeyContext.get(), ac.getId())
         );
         tunnelRequest.setRoute(tunnelMessage.getRoute());
         tunnelRequest.setTunnelMsg(tunnelMessage);

@@ -40,14 +40,13 @@ public class ClientTunnel {
 
     private DebuggerInstance instance;
 
-    // TODO stan 2022/4/18 简化参数
     public ClientTunnel(RSocketRequester.Builder builder,
                         RSocketStrategies strategies,
                         List<TunnelHandler> handlers,
                         DebugKeyProvider debugKeyProvider, DebugClientProperties properties,
-                        // TODO stan 2022/4/19 没有配置的时候
-                        @Value("${spring.application.name}") String applicationId
-                        ) {
+                        // TODO test stan 2022/4/20
+                        @Value("${spring.application.name:application}") String applicationId
+    ) {
         this.properties = properties;
         this.debugKeyProvider = debugKeyProvider;
         this.applicationId = applicationId;

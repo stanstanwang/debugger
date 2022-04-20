@@ -16,7 +16,6 @@ import static io.terminus.debugger.common.tunnel.RouteConstants.TEST_CLIENT_SERV
  */
 @RestController
 @RequestMapping("/inner")
-// TODO stan 2022/4/15 conditionon
 public class InnerController {
 
 

@@ -17,14 +17,14 @@ import java.util.HashMap;
  * @date 2022/3/21
  */
 @Component
-// TODO stan 2022/4/19 是否客户端才必须有
+// 是否客户端才必须有, 是不是问题也不大， 不会有很大的影响
 public class HttpDebugRepeater implements DebugRepeater<HttpTunnelMessage, HttpTunnelResponse> {
 
 
     private final WebClient webClient;
 
 
-    public HttpDebugRepeater(@Value("${server.port}") Integer port) {
+    public HttpDebugRepeater(@Value("${server.port:8080}") Integer port) {
         // 客户端会内嵌到用户的jvm里边的，所以这个可以取 web 容器里边配置的 http 端口
         this.webClient = WebClient.builder()
                 .baseUrl(String.format("http://127.0.0.1:%s", port))

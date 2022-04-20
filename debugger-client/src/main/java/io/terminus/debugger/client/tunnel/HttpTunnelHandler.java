@@ -21,7 +21,6 @@ public class HttpTunnelHandler implements TunnelHandler {
         this.httpDebugRepeater = httpDebugRepeater;
     }
 
-    // 得在 requester 的地方加上
     @MessageMapping(RouteConstants.HTTP_TUNNEL_HANDLE)
     public Mono<HttpTunnelResponse> receive(HttpTunnelMessage tunnelMessage) {
         return httpDebugRepeater.repeat(tunnelMessage);

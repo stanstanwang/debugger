@@ -1,7 +1,8 @@
 package io.terminus.debugger.server.registry;
 
 import io.terminus.debugger.common.registry.DebuggerInstance;
-import io.terminus.debugger.common.registry.GetInstanceRequest;
+import io.terminus.debugger.common.registry.DelInstanceReq;
+import io.terminus.debugger.common.registry.GetInstanceReq;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -21,33 +22,33 @@ public class DebuggerRegistry {
     /**
      * 所有本地 debugger 注册到当前的数据，用内存方式存取
      */
-    private final Map<String, DebuggerInstance> registryMap = new ConcurrentHashMap<>();
+    private final Map<String, ServerDebuggerInstance> registryMap = new ConcurrentHashMap<>();
 
     /**
      * 将本地debugger实例注册进来
      */
-    public void register(DebuggerInstance instance) {
+    public void register(ServerDebuggerInstance instance) {
         registryMap.put(uniqueId(instance), instance);
     }
 
     /**
      * 取消本地debugger实例的注册
      */
-    public void unregister(DebuggerInstance instance) {
+    public void unregister(DelInstanceReq instance) {
         registryMap.remove(uniqueId(instance));
     }
 
     /**
      * 查找debugger实例
      */
-    public DebuggerInstance get(GetInstanceRequest request) {
+    public ServerDebuggerInstance get(GetInstanceReq request) {
         return registryMap.get(uniqueId(request));
     }
 
     /**
      * 查找当前所有debugger实例
      */
-    public Collection<DebuggerInstance> list() {
+    public Collection<ServerDebuggerInstance> list() {
         return registryMap.values();
     }
 
@@ -55,7 +56,7 @@ public class DebuggerRegistry {
         return uniqueId(instance.getDebugKey(), instance.getInstanceId());
     }
 
-    static String uniqueId(GetInstanceRequest request) {
+    static String uniqueId(GetInstanceReq request) {
         return uniqueId(request.getDebugKey(), request.getInstanceId());
     }
 

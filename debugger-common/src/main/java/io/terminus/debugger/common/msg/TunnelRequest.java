@@ -1,6 +1,6 @@
 package io.terminus.debugger.common.msg;
 
-import io.terminus.debugger.common.registry.GetInstanceRequest;
+import io.terminus.debugger.common.registry.GetInstanceReq;
 import lombok.Data;
 
 /**
@@ -15,7 +15,7 @@ public class TunnelRequest {
     /**
      * 透传给对应的实例
      */
-    private GetInstanceRequest instanceRequest;
+    private GetInstanceReq instanceRequest;
 
     /**
      * 透传给对应的地址

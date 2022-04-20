@@ -1,12 +1,12 @@
 package io.terminus.debugger.server.tunnel;
 
 import io.rsocket.RSocket;
-import io.terminus.debugger.common.registry.DebuggerConnection;
-import io.terminus.debugger.common.registry.DebuggerInstance;
-import io.terminus.debugger.common.registry.GetInstanceRequest;
+import io.terminus.debugger.common.registry.*;
 import io.terminus.debugger.common.tunnel.RouteConstants;
 import io.terminus.debugger.server.registry.DebuggerRegistry;
+import io.terminus.debugger.server.registry.ServerDebuggerInstance;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
@@ -42,31 +42,36 @@ public class ServerTunnel {
         rSocket.onClose()
                 .doFirst(() -> {
                     log.info("Debugger Client key [{}] connected.", instance.getDebugKey());
-                    DebuggerInstance debuggerInstance = new DebuggerInstance(instance.getDebugKey(), instance.getInstanceId(), new DebuggerConnection(requester));
+                    ServerDebuggerInstance debuggerInstance = new ServerDebuggerInstance(instance.getDebugKey(), instance.getInstanceId(), requester);
                     registry.register(debuggerInstance);
                 })
                 .doFinally(signalType -> {
                     log.info("Debugger Client key [{}] disconnected.", instance.getDebugKey());
-                    registry.unregister(instance);
+                    registry.unregister(new DelInstanceReq(instance.getDebugKey(), instance.getInstanceId()));
                 })
                 .subscribe();
+    }
+
+    @MessageMapping(RouteConstants.PING)
+    public Mono<Integer> ping() {
+        return Mono.just(1);
     }
 
 
     /**
      * 将透传请求路由给隧道客户端
      *
-     * @param instanceRequest 获取客户端实例
-     * @param route           对应要调用的方法
-     * @param tunnelMessage   对应的入参
+     * @param getInstanceReq 获取客户端实例
+     * @param route          对应要调用的方法
+     * @param tunnelMessage  对应的入参
      */
-    public Mono<Object> send(GetInstanceRequest instanceRequest,
+    public Mono<Object> send(GetInstanceReq getInstanceReq,
                              String route,
                              Object tunnelMessage) {
-        DebuggerConnection connection = registry
-                .get(instanceRequest)
-                .getConnection();
-        return connection.send(route, tunnelMessage);
+        return registry.get(getInstanceReq).getRequester()
+                .route(route)
+                .data(tunnelMessage)
+                .retrieveMono(Object.class);
     }
 
 }
