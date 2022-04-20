@@ -3,6 +3,7 @@ package io.terminus.debugger.client.http;
 import io.terminus.debugger.client.core.DebugRepeater;
 import io.terminus.debugger.common.msg.HttpTunnelMessage;
 import io.terminus.debugger.common.msg.HttpTunnelResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -16,15 +17,18 @@ import java.util.HashMap;
  * @date 2022/3/21
  */
 @Component
+// TODO stan 2022/4/19 是否客户端才必须有
 public class HttpDebugRepeater implements DebugRepeater<HttpTunnelMessage, HttpTunnelResponse> {
 
 
     private final WebClient webClient;
 
-    public HttpDebugRepeater() {
-        // TODO stan 2022/4/13 这个地址调正确
+
+    public HttpDebugRepeater(@Value("${server.port}") Integer port) {
         // 客户端会内嵌到用户的jvm里边的，所以这个可以取 web 容器里边配置的 http 端口
-        this.webClient = WebClient.builder().baseUrl("localhost:8080").build();
+        this.webClient = WebClient.builder()
+                .baseUrl(String.format("http://127.0.0.1:%s", port))
+                .build();
     }
 
     @Override

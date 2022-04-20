@@ -15,6 +15,6 @@ public class DebugKeyProvider {
      */
     public String getDebugKey() {
         // TODO stan 2022/4/15 通过环境变量取， 没有环境变量则取 mac 地址
-        return "stan_" + System.currentTimeMillis();
+        return "stan_123";
     }
 }

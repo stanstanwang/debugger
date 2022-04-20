@@ -7,7 +7,6 @@ import io.terminus.debugger.common.registry.GetInstanceRequest;
 import io.terminus.debugger.common.tunnel.RouteConstants;
 import io.terminus.debugger.server.registry.DebuggerRegistry;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
@@ -36,10 +35,10 @@ public class ServerTunnel {
     @ConnectMapping(RouteConstants.CONNECT)
     public void connect(RSocketRequester requester, @Payload DebuggerInstance instance) {
         log.info("client tunnel connected : {}", instance);
-
         RSocket rSocket = requester.rsocket();
         // 这里onClose语义应该是不太对的，怎么可能是 onClose 的时候去触发注册到注册中心呢
         // 这里效果等同于 Mono.never(), 除非报错，否则不会结束
+        // 不过官方用法还真是这样子的， 神奇 https://spring.io/blog/2020/05/12/getting-started-with-rsocket-servers-calling-clients
         rSocket.onClose()
                 .doFirst(() -> {
                     log.info("Debugger Client key [{}] connected.", instance.getDebugKey());

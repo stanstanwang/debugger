@@ -26,7 +26,7 @@ public class DebugClient implements ApplicationContextAware {
 
     // TODO stan 2022/4/13 使用 webClientBuilder?
     public DebugClient(DebugClientProperties clientProperties, WebClient.Builder builder) {
-        String baseUrl = String.format("%s:%s", clientProperties.getServerHost(),
+        String baseUrl = String.format("http://%s:%s", clientProperties.getServerHost(),
                 clientProperties.getHttpPort());
         this.webClient = builder.baseUrl(baseUrl).build();
     }

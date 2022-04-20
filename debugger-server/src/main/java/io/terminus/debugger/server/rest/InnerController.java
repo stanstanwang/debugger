@@ -6,6 +6,7 @@ import io.terminus.debugger.common.tunnel.RouteConstants;
 import io.terminus.debugger.server.registry.DebuggerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -58,5 +59,20 @@ public class InnerController {
         log.info("receive from client {}", param);
         return Mono.just(System.currentTimeMillis());
     }
+
+
+    @MessageMapping(RouteConstants.PING)
+    public Mono<Integer> ping() {
+        return Mono.just(1);
+    }
+
+    @GetMapping("/dispose")
+    public Mono<Long> dispose() {
+        registry.list().stream()
+                .map(it -> it.getConnection().getRequester())
+                .forEach(RSocketRequester::dispose);
+        return Mono.empty();
+    }
+
 
 }

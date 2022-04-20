@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 import static io.terminus.debugger.common.tunnel.RouteConstants.TEST_CLIENT_SERVER;
 
 /**
@@ -20,8 +22,8 @@ public class InnerController {
 
     private final ClientTunnel clientTunnel;
 
-    public InnerController(ClientTunnel clientTunnel) {
-        this.clientTunnel = clientTunnel;
+    public InnerController(Optional<ClientTunnel> clientTunnel) {
+        this.clientTunnel = clientTunnel.orElse(null);
     }
 
     /**
@@ -29,10 +31,22 @@ public class InnerController {
      */
     @GetMapping("/client-server")
     public Mono<Long> testServer() {
+        if (clientTunnel == null) {
+            return Mono.empty();
+        }
         return clientTunnel.getRequester()
                 .route(TEST_CLIENT_SERVER)
                 .data(System.currentTimeMillis())
                 .retrieveMono(Long.class);
+    }
+
+    @GetMapping("/dispose")
+    public Mono<Long> dispose() {
+        if (clientTunnel == null) {
+            return Mono.empty();
+        }
+        clientTunnel.getRequester().dispose();
+        return Mono.empty();
     }
 
 }

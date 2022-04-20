@@ -11,6 +11,7 @@ import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.servlet.AsyncContext;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -41,11 +42,12 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-
-
         try {
             if (debugEnable(request)) {
-                localDebug(request, response);
+                AsyncContext asyncContext = request.startAsync();
+                // 因为里边用到了nio去转发， 所以这里也得转异步
+                localDebug(asyncContext, (HttpServletRequest) asyncContext.getRequest(),
+                        (HttpServletResponse) asyncContext.getResponse());
             } else {
                 filterChain.doFilter(request, response);
             }
@@ -80,17 +82,18 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     }
 
 
-    private void localDebug(HttpServletRequest request, HttpServletResponse response) {
+    private void localDebug(AsyncContext asyncContext, HttpServletRequest request, HttpServletResponse response) {
         // 1. 将 http request 透传给隧道服务
         HttpTunnelMessage tunnelMessage = convertRequest(request);
 
-        // TODO stan 2022/4/12 这里得异步处理，避免阻塞http线程或者超时
+        // TODO stan 2022/4/12 这里得异步处理，避免阻塞http线程或者超时， 本身底层webClient的实现就是非阻塞的，应该还好
         // TODO stan 2022/4/13 超时异常的处理
-        // TODO stan 2022/4/13 执行失败的判断,
+        // TODO stan 2022/4/13 执行失败的判断
 
         // 2. 将 http response 响应给正常请求
         debugClient.tunnelRequest(tunnelMessage, HttpTunnelResponse.class)
                 .timeout(Duration.ofSeconds(20))
+                .doFinally(s -> asyncContext.complete())
                 .subscribe(r -> convertResponse(r, response))
         ;
     }
@@ -104,8 +107,8 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     @SneakyThrows
     private HttpTunnelMessage convertRequest(HttpServletRequest request) {
         HttpTunnelMessage tunnelMessage = new HttpTunnelMessage();
-        // TODO test stan 2022/4/12 getString() 的 验证
-        tunnelMessage.setUrl(request.getRequestURI());
+        // TODO test stan 2022/4/12 getString() 的 验证， 可能会少了 params
+        tunnelMessage.setUrl(getUrl(request));
         tunnelMessage.setMethod(request.getMethod());
         tunnelMessage.setHeaders(toHeaders(request));
 
@@ -116,6 +119,20 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
         StreamUtils.copy(request.getInputStream(), boas);
         tunnelMessage.setBody(boas.toByteArray());
         return tunnelMessage;
+    }
+
+
+    /**
+     * 获取 url， 得将 queryString 这部分拼接回来
+     */
+    private String getUrl(HttpServletRequest request) {
+        String url;
+        if (StringUtils.hasLength(request.getQueryString())) {
+            url = request.getRequestURI() + "?" + request.getQueryString();
+        } else {
+            url = request.getRequestURI();
+        }
+        return url;
     }
 
 

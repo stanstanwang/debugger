@@ -14,9 +14,11 @@ public interface RouteConstants {
     String TUNNEL_REQUEST = "/tunnelRequest";
 
     /**
-     * 隧道的连接
+     * 服务端处理隧道的连接
      */
     String CONNECT = "tunnel-connect";
+    // 心跳使用
+    String PING = "ping";
 
     /**
      * 处理回调

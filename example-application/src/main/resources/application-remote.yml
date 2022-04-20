@@ -1,19 +1,17 @@
 server:
-  port: 8711
-spring:
-  application:
-    name: DebugClient
-# debug: true
+  port: 8810
+
 
 terminus:
   localdebug:
     enable: true
-    local: true
+    local: false
     http-port: 8710
     tunnel-port: 7000
 
 logging:
   level:
     io.rsocket.FrameLogger: DEBUG
-
-
+spring:
+  application:
+    name: helloApplication

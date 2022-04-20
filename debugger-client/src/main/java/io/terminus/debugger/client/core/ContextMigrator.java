@@ -5,6 +5,8 @@ package io.terminus.debugger.client.core;
  * 上下文迁移器
  * @param <T>
  */
+
+// TODO stan 2022/4/19 透传的处理
 public interface ContextMigrator<T> {
     /**
      * 在线程创建之前将上下文拿出来

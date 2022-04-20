@@ -3,8 +3,10 @@ package io.terminus.debugger.client;
 import io.terminus.debugger.client.core.DebugClient;
 import io.terminus.debugger.client.core.DebugClientProperties;
 import io.terminus.debugger.client.http.HttpDebugInterceptor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 
@@ -13,6 +15,8 @@ import org.springframework.core.Ordered;
  * @date 2022/4/15
  */
 @Configuration
+@ComponentScan
+@ConditionalOnProperty(prefix = "terminus.localdebug", value = "enable", havingValue = "true")
 public class DebugClientConfig {
 
     @Bean

@@ -4,13 +4,20 @@ import io.terminus.debugger.client.core.DebugClientProperties;
 import io.terminus.debugger.client.core.DebugKeyProvider;
 import io.terminus.debugger.common.registry.DebuggerInstance;
 import io.terminus.debugger.common.tunnel.RouteConstants;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
+import javax.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.List;
 
@@ -21,35 +28,83 @@ import java.util.List;
  * @date 2022/3/21
  */
 @Component
+@Slf4j
+@ConditionalOnProperty(prefix = "terminus.localdebug", value = "local", havingValue = "true")
 public class ClientTunnel {
 
     private final DebugKeyProvider debugKeyProvider;
     private final DebugClientProperties properties;
-    private RSocketRequester.Builder builder;
-    private RSocketRequester requester;
+    private final RSocketRequester requester;
 
-    // TODO stan 2022/4/15
-    // @Value("${spring.application.name}")
-    private String applicationId = "helloApplicationId";
-
+    private final String applicationId;
 
     private DebuggerInstance instance;
 
+    // TODO stan 2022/4/18 简化参数
     public ClientTunnel(RSocketRequester.Builder builder,
                         RSocketStrategies strategies,
-                        DebugClientProperties properties, DebugKeyProvider debugKeyProvider,
-                        List<TunnelHandler> handlers
-    ) {
+                        List<TunnelHandler> handlers,
+                        DebugKeyProvider debugKeyProvider, DebugClientProperties properties,
+                        // TODO stan 2022/4/19 没有配置的时候
+                        @Value("${spring.application.name}") String applicationId
+                        ) {
         this.properties = properties;
         this.debugKeyProvider = debugKeyProvider;
-        this.builder = builder;
-        initBuilder(strategies, handlers);
-        this.requester = connect();
+        this.applicationId = applicationId;
+        this.requester = connect(builder, strategies, handlers);
+        triggerReconnect();
     }
 
-    private RSocketRequester connect() {
-        return this.builder.setupData(getDebugInstance())
+    /**
+     * 建立 rsocket 连接
+     *
+     * @param builder    用于构建 rsocket 的请求
+     * @param strategies 用于做配置， 比如序列化之类的
+     * @param handlers   默认处理器
+     */
+    private RSocketRequester connect(RSocketRequester.Builder builder, RSocketStrategies strategies, List<TunnelHandler> handlers) {
+        return builder.dataMimeType(MimeTypeUtils.APPLICATION_JSON)
+                .rsocketConnector(connector -> {
+                    Object[] handlerArray = handlers.toArray();
+                    connector.acceptor(RSocketMessageHandler.responder(strategies, handlerArray));
+                    // 默认服务端和客户端 20秒发送一次心跳， 90秒内没接受到心跳则会 close
+                    // connector.keepAlive(Duration.ofSeconds(5L), Duration.ofSeconds(10L));
+                    // 配置无限重试
+                    connector.reconnect(Retry.indefinitely());
+                })
+                .setupRoute(RouteConstants.CONNECT)
+                .setupData(getDebugInstance())
+                // 内部还是 Mono， subscribe前并不会真正触发操作
                 .tcp(properties.getServerHost(), properties.getTunnelPort());
+    }
+
+
+    /**
+     * 触发重连操作， rsocket 是需要发送请求才能触发 setUp 包的，这里通过定时器来不断发送请求
+     * <p>
+     * 这样可以保证以下情况下的连接稳定：
+     * - 服务端重启， 客户端会重新发送 setup 请求
+     * - 服务端或者客户端因心跳超时关闭， 客户端也会重新发送 setup 请求
+     */
+    private void triggerReconnect() {
+        Flux.interval(Duration.ofSeconds(5), Schedulers.newParallel("debugger-reconnect", 1))
+                // 这样发生错误之后， interval 还能继续
+                .flatMap(this::pingWithCatch)
+                .subscribe();
+    }
+
+    // 响应 0 表示连接不成功
+    private Mono<Integer> pingWithCatch(long v) {
+        if (requester.isDisposed()) {
+            return Mono.just(0);
+        }
+        return this.requester.route(RouteConstants.PING)
+                .retrieveMono(Integer.class)
+                .timeout(Duration.ofSeconds(3))
+                .onErrorResume(e -> {
+                    log.error("triggerReconnect error", e);
+                    return Mono.just(0);
+                });
     }
 
 
@@ -59,145 +114,23 @@ public class ClientTunnel {
     private DebuggerInstance getDebugInstance() {
         if (this.instance == null) {
             String debugKey = this.debugKeyProvider.getDebugKey();
-            String instanceId = applicationId;
-            this.instance = new DebuggerInstance(debugKey, instanceId);
+            this.instance = new DebuggerInstance(debugKey, applicationId);
         }
         return instance;
     }
 
-    public void initBuilder(RSocketStrategies strategies, List<TunnelHandler> handlers) {
-        this.builder = builder.dataMimeType(MimeTypeUtils.APPLICATION_JSON)
-                .rsocketConnector(connector -> {
-                    Object[] handlerArray = handlers.toArray();
-                    connector.acceptor(RSocketMessageHandler.responder(strategies, handlerArray));
-                    connector.keepAlive(Duration.ofSeconds(20L), Duration.ofMinutes(1L));
-                    connector.reconnect(Retry.max(1));
-                }).setupRoute(RouteConstants.CONNECT)
-        ;
-    }
-
-
-    /*
-    public void init() {
-        this.onConnect();
-        this.keepAlive();
-    }*/
-
-
-/**
- * 初始化客户端
- *//*
-
-    private void initClient() {
-        this.requester.rsocketClient().source()
-                .doOnSuccess(socket -> {
-                    this.active = true;
-                    log.info("Debug client key [{}] connection success.", namespace.getKey());
-                    socket.onClose().doFinally(signalType -> {
-                        log.info("Debug client key [{}] connection disconnected.", namespace.getKey());
-                        onClosed(socket);
-                    }).subscribe();
-                })
-                .doOnError(e -> {
-                    log.warn("Debug client key[{}] connection fail.", namespace.getKey(), e);
-                    this.active = false;
-                    this.tryToReconnect();
-                }).subscribe();
-    }
-
-    */
-/**
- * 心跳监测
- *
- * @return 结果
- *//*
-
-    private Mono<Boolean> healthCheck() {
-        if (this.stop) {
-            return Mono.just(false);
-        }
-        return this.requester.route(CLIENT_CALL_SERVER_PONG).data("").retrieveMono(Integer.class)
-                .timeout(Duration.ofSeconds(3))
-                .onErrorReturn(0)
-                .handle((payload, sink) -> {
-                    if (payload == 1 && !this.active) {
-                        this.initClient();
-                    }
-                    sink.next(payload == 1);
-                });
-    }
-
-    */
-/**
- * 保活
- *//*
-
-    private void keepAlive() {
-        Flux.interval(Duration.ofSeconds(15))
-                .filter(sequence -> !active)
-                .flatMap(s -> healthCheck())
-                .subscribe(check -> {
-                    if (!check && !stop) {
-                        onConnect();
-                    }
-                });
-    }
-
-    */
-/**
- * 尝试重联
- *//*
-
-    public void tryToReconnect() {
-        if (retry.get()) {
-            log.info("Debug client tryToReconnect...");
-            return;
-        }
-        retry.set(true);
-        Flux.range(1, MAX_TRY_COUNT)
-                .delayElements(Duration.ofSeconds(5))
-                .filter(id -> !active)
-                .flatMap(id -> healthCheck())
-                .filter(check -> {
-                    if (check) {
-                        active = true;
-                    }
-                    return !check;
-                })
-                .doFinally(s -> {
-                    log.info("Debug client status: {}:{}", active, s);
-                    retry.set(false);
-                })
-                .subscribe(check -> {
-                    if (!active && !stop) {
-                        log.info("Debug client reconnect...");
-                        onConnect();
-                    }
-                });
-    }
-
-    */
-
-    /**
-     * 关闭链接，后面会重试链接
-     *
-     * @param rsocket 链接
-     *//*
-
-    private void onClosed(RSocket rsocket) {
-        if (!rsocket.isDisposed()) {
-            try {
-                rsocket.dispose();
-            } catch (Exception ignore) {
-
-            }
-        }
-        this.active = false;
-
-        tryToReconnect();
-    }
-*/
     public RSocketRequester getRequester() {
         return requester;
     }
+
+
+    // 貌似不用加这个服务端也能感知到 close, 神奇了
+    @PreDestroy
+    public void destroy() {
+        log.info("dispose {}", requester.isDisposed());
+        if (!requester.isDisposed()) {
+            requester.dispose();
+        }
+    }
+
 }

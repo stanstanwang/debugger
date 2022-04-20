@@ -6,6 +6,7 @@ package io.terminus.debugger.client.core;
  */
 public class DebugKeyContext {
 
+    // TODO stan 2022/4/19 需要可配置
     public static String DEBUG_KEY = "trantor-debug-key";
 
     private static final ThreadLocal<String> LOCAL = new ThreadLocal<>();

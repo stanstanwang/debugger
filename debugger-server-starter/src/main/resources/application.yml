@@ -4,4 +4,8 @@ spring:
       port: 7000
 server:
   port: 8710
-debug: true
+# debug: true
+
+logging:
+  level:
+    io.rsocket.FrameLogger: DEBUG
