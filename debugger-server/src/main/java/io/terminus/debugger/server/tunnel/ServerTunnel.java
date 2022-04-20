@@ -52,6 +52,10 @@ public class ServerTunnel {
                 .subscribe();
     }
 
+
+    /**
+     * 用于心跳处理
+     */
     @MessageMapping(RouteConstants.PING)
     public Mono<Integer> ping() {
         return Mono.just(1);
@@ -61,14 +65,14 @@ public class ServerTunnel {
     /**
      * 将透传请求路由给隧道客户端
      *
-     * @param getInstanceReq 获取客户端实例
-     * @param route          对应要调用的方法
-     * @param tunnelMessage  对应的入参
+     * @param instanceReq   需要知道透传给谁
+     * @param route         需要知道透传给哪个连接
+     * @param tunnelMessage 需要知道对应的透传参数
      */
-    public Mono<Object> send(GetInstanceReq getInstanceReq,
+    public Mono<Object> send(GetInstanceReq instanceReq,
                              String route,
                              Object tunnelMessage) {
-        return registry.get(getInstanceReq).getRequester()
+        return registry.get(instanceReq).getRequester()
                 .route(route)
                 .data(tunnelMessage)
                 .retrieveMono(Object.class);

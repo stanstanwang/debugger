@@ -6,7 +6,12 @@ import io.terminus.debugger.client.core.DebugInterceptor;
 import io.terminus.debugger.client.core.DebugKeyContext;
 import io.terminus.debugger.common.msg.HttpTunnelMessage;
 import io.terminus.debugger.common.msg.HttpTunnelResponse;
+import io.terminus.debugger.common.msg.TunnelRequest;
+import io.terminus.debugger.common.registry.GetInstanceReq;
 import lombok.SneakyThrows;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -29,10 +34,12 @@ import static io.terminus.debugger.client.core.DebugKeyContext.DEBUG_KEY;
  * @author stan
  * @date 2022/3/21
  */
-public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugInterceptor {
+public class HttpDebugInterceptor extends OncePerRequestFilter
+        implements DebugInterceptor, ApplicationContextAware {
 
     private final DebugClient debugClient;
     private final DebugClientProperties clientProperties;
+    private ApplicationContext ac;
 
     public HttpDebugInterceptor(DebugClient debugClient, DebugClientProperties clientProperties) {
         this.debugClient = debugClient;
@@ -43,55 +50,42 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
-            if (debugEnable(request)) {
-                AsyncContext asyncContext = request.startAsync();
+            // 可以确保所有http请求都经过该拦截器， DebugKeyContext 都有值
+            initDebugContext(request);
+            if (clientProperties.isLocalDebugEnable()) {
                 // 因为里边用到了nio去转发， 所以这里也得转异步
+                AsyncContext asyncContext = request.startAsync();
                 localDebug(asyncContext, (HttpServletRequest) asyncContext.getRequest(),
                         (HttpServletResponse) asyncContext.getResponse());
             } else {
                 filterChain.doFilter(request, response);
             }
         } finally {
-            // TODO stan 2022/4/11 代码格式没太好，有看看具体怎么改
             DebugKeyContext.remove();
         }
     }
 
 
-    /**
-     * 判断是否执行 localdebug 的逻辑
-     */
-    private boolean debugEnable(HttpServletRequest request) {
-        // 判断是否走debug模式
-        if (!clientProperties.isEnable()) {
-            return false;
-        }
-
-        // 本身是 local 的情况下
-        if (clientProperties.isLocal()) {
-            return false;
-        }
-
-        // 判断是否携带debug请求头
+    private void initDebugContext(HttpServletRequest request) {
         String debugKey = request.getHeader(DEBUG_KEY);
         if (StringUtils.hasLength(debugKey)) {
             DebugKeyContext.set(debugKey);
-            return true;
         }
-        return false;
     }
 
 
     private void localDebug(AsyncContext asyncContext, HttpServletRequest request, HttpServletResponse response) {
         // 1. 将 http request 透传给隧道服务
         HttpTunnelMessage tunnelMessage = convertRequest(request);
-
-        // TODO stan 2022/4/12 这里得异步处理，避免阻塞http线程或者超时， 本身底层webClient的实现就是非阻塞的，应该还好
-        // TODO stan 2022/4/13 超时异常的处理
-        // TODO stan 2022/4/13 执行失败的判断
+        TunnelRequest tunnelRequest = TunnelRequest.wrapMessage(
+                new GetInstanceReq(DebugKeyContext.get(), ac.getId())
+                , tunnelMessage);
 
         // 2. 将 http response 响应给正常请求
-        debugClient.tunnelRequest(tunnelMessage, HttpTunnelResponse.class)
+        //  这里得异步处理，避免阻塞http线程， 本身底层webClient的实现就是非阻塞的，应该还好
+        // 执行失败不用处理， 因为转发的是整个 http 请求
+        // TODO test stan 2022/4/13 超时异常的处理
+        debugClient.tunnelRequest(tunnelRequest, HttpTunnelResponse.class)
                 .timeout(Duration.ofSeconds(20))
                 .doFinally(s -> asyncContext.complete())
                 .subscribe(r -> convertResponse(r, response))
@@ -107,7 +101,6 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     @SneakyThrows
     private HttpTunnelMessage convertRequest(HttpServletRequest request) {
         HttpTunnelMessage tunnelMessage = new HttpTunnelMessage();
-        // TODO test stan 2022/4/12 getString() 的 验证， 可能会少了 params
         tunnelMessage.setUrl(getUrl(request));
         tunnelMessage.setMethod(request.getMethod());
         tunnelMessage.setHeaders(toHeaders(request));
@@ -171,5 +164,10 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
         return list;
     }
 
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.ac = applicationContext;
+    }
 
 }

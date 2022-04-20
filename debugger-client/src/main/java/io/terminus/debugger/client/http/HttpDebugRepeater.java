@@ -24,9 +24,9 @@ public class HttpDebugRepeater implements DebugRepeater<HttpTunnelMessage, HttpT
     private final WebClient webClient;
 
 
-    public HttpDebugRepeater(@Value("${server.port:8080}") Integer port) {
+    public HttpDebugRepeater(@Value("${server.port:8080}") Integer port, WebClient.Builder builder) {
         // 客户端会内嵌到用户的jvm里边的，所以这个可以取 web 容器里边配置的 http 端口
-        this.webClient = WebClient.builder()
+        this.webClient = builder.clone()
                 .baseUrl(String.format("http://127.0.0.1:%s", port))
                 .build();
     }
