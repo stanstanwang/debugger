@@ -1,11 +1,9 @@
 package io.terminus.debugger.client.tunnel;
 
-import io.terminus.debugger.client.core.DebugClientProperties;
-import io.terminus.debugger.client.core.DebugKeyProvider;
-import io.terminus.debugger.common.registry.DebuggerInstance;
+import io.terminus.debugger.client.core.DebuggerInstanceProvider;
+import io.terminus.debugger.client.core.LocalDebugProperties;
 import io.terminus.debugger.common.tunnel.RouteConstants;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.RSocketStrategies;
@@ -32,24 +30,17 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "terminus.localdebug", value = "local", havingValue = "true")
 public class ClientTunnel {
 
-    private final DebugKeyProvider debugKeyProvider;
-    private final DebugClientProperties properties;
+    private final DebuggerInstanceProvider instanceProvider;
+    private final LocalDebugProperties debugProperties;
     private final RSocketRequester requester;
-
-    private final String applicationId;
-
-    private DebuggerInstance instance;
 
     public ClientTunnel(RSocketRequester.Builder builder,
                         RSocketStrategies strategies,
                         List<TunnelHandler> handlers,
-                        DebugKeyProvider debugKeyProvider, DebugClientProperties properties,
-                        // TODO test stan 2022/4/20
-                        @Value("${spring.application.name:application}") String applicationId
+                        DebuggerInstanceProvider instanceProvider, LocalDebugProperties debugProperties
     ) {
-        this.properties = properties;
-        this.debugKeyProvider = debugKeyProvider;
-        this.applicationId = applicationId;
+        this.debugProperties = debugProperties;
+        this.instanceProvider = instanceProvider;
         this.requester = connect(builder, strategies, handlers);
         triggerReconnect();
     }
@@ -72,9 +63,9 @@ public class ClientTunnel {
                     connector.reconnect(Retry.indefinitely());
                 })
                 .setupRoute(RouteConstants.CONNECT)
-                .setupData(getDebugInstance())
+                .setupData(instanceProvider.get())
                 // 内部还是 Mono， subscribe前并不会真正触发操作
-                .tcp(properties.getServerHost(), properties.getTunnelPort());
+                .tcp(debugProperties.getServerHost(), debugProperties.getTunnelPort());
     }
 
 
@@ -104,18 +95,6 @@ public class ClientTunnel {
                     log.error("triggerReconnect error", e);
                     return Mono.just(0);
                 });
-    }
-
-
-    /**
-     * 获取当前服务实例
-     */
-    private DebuggerInstance getDebugInstance() {
-        if (this.instance == null) {
-            String debugKey = this.debugKeyProvider.getDebugKey();
-            this.instance = new DebuggerInstance(debugKey, applicationId);
-        }
-        return instance;
     }
 
     public RSocketRequester getRequester() {

@@ -1,17 +1,11 @@
 package io.terminus.debugger.client.http;
 
-import io.terminus.debugger.client.core.DebugClient;
-import io.terminus.debugger.client.core.DebugClientProperties;
-import io.terminus.debugger.client.core.DebugInterceptor;
-import io.terminus.debugger.client.core.DebugKeyContext;
+import io.terminus.debugger.client.core.*;
 import io.terminus.debugger.common.msg.HttpTunnelMessage;
 import io.terminus.debugger.common.msg.HttpTunnelResponse;
 import io.terminus.debugger.common.msg.TunnelRequest;
 import io.terminus.debugger.common.registry.GetInstanceReq;
 import lombok.SneakyThrows;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -34,16 +28,17 @@ import static io.terminus.debugger.client.core.DebugKeyContext.DEBUG_KEY;
  * @author stan
  * @date 2022/3/21
  */
-public class HttpDebugInterceptor extends OncePerRequestFilter
-        implements DebugInterceptor, ApplicationContextAware {
+public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugInterceptor {
 
     private final DebugClient debugClient;
-    private final DebugClientProperties clientProperties;
-    private ApplicationContext ac;
+    private final LocalDebugProperties debugProperties;
+    private final DebuggerInstanceProvider instanceProvider;
 
-    public HttpDebugInterceptor(DebugClient debugClient, DebugClientProperties clientProperties) {
+    public HttpDebugInterceptor(DebugClient debugClient,
+                                LocalDebugProperties debugProperties, DebuggerInstanceProvider instanceProvider) {
         this.debugClient = debugClient;
-        this.clientProperties = clientProperties;
+        this.debugProperties = debugProperties;
+        this.instanceProvider = instanceProvider;
     }
 
 
@@ -52,7 +47,7 @@ public class HttpDebugInterceptor extends OncePerRequestFilter
         try {
             // 可以确保所有http请求都经过该拦截器， DebugKeyContext 都有值
             initDebugContext(request);
-            if (clientProperties.isLocalDebugEnable()) {
+            if (canLocalDebug()) {
                 // 因为里边用到了nio去转发， 所以这里也得转异步
                 AsyncContext asyncContext = request.startAsync();
                 localDebug(asyncContext, (HttpServletRequest) asyncContext.getRequest(),
@@ -63,6 +58,13 @@ public class HttpDebugInterceptor extends OncePerRequestFilter
         } finally {
             DebugKeyContext.remove();
         }
+    }
+
+    private boolean canLocalDebug() {
+        if (!debugProperties.isLocalDebugEnable()) {
+            return false;
+        }
+        return debugClient.instanceExists(getInstanceReq());
     }
 
 
@@ -78,11 +80,11 @@ public class HttpDebugInterceptor extends OncePerRequestFilter
         // 1. 将 http request 透传给隧道服务
         HttpTunnelMessage tunnelMessage = convertRequest(request);
         TunnelRequest tunnelRequest = TunnelRequest.wrapMessage(
-                new GetInstanceReq(DebugKeyContext.get(), ac.getId())
+                getInstanceReq()
                 , tunnelMessage);
 
         // 2. 将 http response 响应给正常请求
-        //  这里得异步处理，避免阻塞http线程， 本身底层webClient的实现就是非阻塞的，应该还好
+        // 这里得异步处理，避免阻塞http线程， 本身底层webClient的实现就是非阻塞的，应该还好
         // 执行失败不用处理， 因为转发的是整个 http 请求
         // TODO test stan 2022/4/13 超时异常的处理
         debugClient.tunnelRequest(tunnelRequest, HttpTunnelResponse.class)
@@ -91,7 +93,6 @@ public class HttpDebugInterceptor extends OncePerRequestFilter
                 .subscribe(r -> convertResponse(r, response))
         ;
     }
-
 
     /**
      * 将 http 请求转化为隧道透传的请求
@@ -165,9 +166,8 @@ public class HttpDebugInterceptor extends OncePerRequestFilter
     }
 
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.ac = applicationContext;
+    private GetInstanceReq getInstanceReq() {
+        return new GetInstanceReq(DebugKeyContext.get(), instanceProvider.getInstanceId());
     }
 
 }

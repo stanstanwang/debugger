@@ -5,7 +5,7 @@ package io.terminus.debugger.client.core;
  * 上下文迁移器
  * @param <T>
  */
-
+// TODO stan 2022/4/22 feign 的拦截
 // TODO stan 2022/4/19 透传的处理
 public interface ContextMigrator<T> {
     /**

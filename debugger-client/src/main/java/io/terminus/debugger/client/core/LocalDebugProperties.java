@@ -14,7 +14,7 @@ import org.springframework.util.StringUtils;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "terminus.localdebug")
-public class DebugClientProperties {
+public class LocalDebugProperties {
     /**
      * 当前debug功能是否开启
      */
@@ -28,19 +28,24 @@ public class DebugClientProperties {
     // debug server 是线上到线上的
     // 隧道是线上到本地的
     /**
-     * 隧道服务
+     * debug服务端的地址
      */
     private String serverHost = "127.0.0.1";
 
     /**
-     * http服务的端口
+     * debug服务对外暴露的http端口
      */
     private int httpPort = 8080;
 
     /**
-     * 隧道服务的端口，目前是 roscket 的实现
+     * debug服务对外暴露的隧道端口，目前是 roscket 的实现
      */
     private int tunnelPort = 7000;
+
+    /**
+     * 当前的debugKey
+     */
+    private String debugKey;
 
 
     /**
