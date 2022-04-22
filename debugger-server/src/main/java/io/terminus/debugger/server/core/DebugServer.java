@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
-
 /**
  * debug 服务端响应 debug 客户端的请求
  *
@@ -32,8 +30,7 @@ public class DebugServer {
      */
     @PostMapping(RouteConstants.INSTANCE_EXISTS)
     public Mono<Boolean> instanceExists(@RequestBody GetInstanceReq instanceReq) {
-        return Mono.just(debuggerRegistry.get(instanceReq))
-                .map(Objects::isNull);
+        return Mono.just(debuggerRegistry.get(instanceReq) != null);
     }
 
 

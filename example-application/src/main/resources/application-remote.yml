@@ -12,6 +12,7 @@ terminus:
 logging:
   level:
     io.rsocket.FrameLogger: DEBUG
+    io.terminus.debugger.client.http.HttpDebugInterceptor: DEBUG
 spring:
   application:
     name: helloApplication

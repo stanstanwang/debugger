@@ -32,7 +32,6 @@ public class DebugClient {
     /**
      * 判断注册中心是否存在
      */
-    // TODO test stan 2022/4/22 得判断注册表是否存在
     public boolean instanceExists(GetInstanceReq instanceRequest) {
         return webClient.post()
                 .uri(RouteConstants.INSTANCE_EXISTS)

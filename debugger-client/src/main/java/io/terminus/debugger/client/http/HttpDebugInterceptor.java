@@ -6,9 +6,12 @@ import io.terminus.debugger.common.msg.HttpTunnelResponse;
 import io.terminus.debugger.common.msg.TunnelRequest;
 import io.terminus.debugger.common.registry.GetInstanceReq;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import reactor.core.publisher.Mono;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.FilterChain;
@@ -17,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 
@@ -28,6 +32,7 @@ import static io.terminus.debugger.client.core.DebugKeyContext.DEBUG_KEY;
  * @author stan
  * @date 2022/3/21
  */
+@Slf4j
 public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugInterceptor {
 
     private final DebugClient debugClient;
@@ -64,7 +69,12 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
         if (!debugProperties.isLocalDebugEnable()) {
             return false;
         }
-        return debugClient.instanceExists(getInstanceReq());
+        GetInstanceReq instanceReq = getInstanceReq();
+        boolean r = debugClient.instanceExists(instanceReq);
+        if (!r) {
+            log.debug("debug instance not exists , ignore local debug. {}", instanceReq);
+        }
+        return r;
     }
 
 
@@ -84,9 +94,16 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
         // 2. 将 http response 响应给正常请求
         // 这里得异步处理，避免阻塞http线程， 本身底层webClient的实现就是非阻塞的，应该还好
         // 执行失败不用处理， 因为转发的是整个 http 请求
-        // TODO test stan 2022/4/13 超时异常的处理
         debugClient.tunnelRequest(tunnelRequest, HttpTunnelResponse.class)
+                // TODO test stan 2022/4/13 异常变量可配置
                 .timeout(Duration.ofSeconds(20))
+                // 超时的处理
+                .onErrorResume(e -> {
+                    HttpTunnelResponse r = new HttpTunnelResponse();
+                    r.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    r.setBody("waiting debug response timeout".getBytes(StandardCharsets.UTF_8));
+                    return Mono.just(r);
+                })
                 .doFinally(s -> asyncContext.complete())
                 .subscribe(r -> convertResponse(r, response))
         ;
@@ -104,7 +121,6 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
         tunnelMessage.setMethod(request.getMethod());
         tunnelMessage.setHeaders(toHeaders(request));
 
-        // TODO test stan 2022/4/13 是否有可重复的需求
         int contentLength = request.getContentLength();
         ByteArrayOutputStream boas = new ByteArrayOutputStream(contentLength > 0 ?
                 contentLength : StreamUtils.BUFFER_SIZE);
@@ -137,9 +153,11 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     @SneakyThrows
     private void convertResponse(HttpTunnelResponse tunnelResponse, HttpServletResponse response) {
         response.setStatus(tunnelResponse.getStatus());
-        tunnelResponse.getHeaders().forEach((k, vs) -> {
-            vs.forEach(v -> response.addHeader(k, v));
-        });
+        if (tunnelResponse.getHeaders() != null) {
+            tunnelResponse.getHeaders().forEach((k, vs) -> {
+                vs.forEach(v -> response.addHeader(k, v));
+            });
+        }
         StreamUtils.copy(tunnelResponse.getBody(), response.getOutputStream());
     }
 

@@ -12,4 +12,12 @@ public class GetInstanceReq extends DebuggerInstance {
     public GetInstanceReq(String debugKey, String instanceId) {
         super(debugKey, instanceId);
     }
+
+    @Override
+    public String toString() {
+        return "GetInstanceReq{" +
+                "debugKey='" + debugKey + '\'' +
+                ", instanceId='" + instanceId + '\'' +
+                '}';
+    }
 }

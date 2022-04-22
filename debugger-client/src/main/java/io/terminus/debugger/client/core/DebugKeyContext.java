@@ -8,7 +8,6 @@ import java.util.Optional;
  */
 public class DebugKeyContext {
 
-    // TODO test stan 2022/4/19 需要可配置
     public static final String DEBUG_KEY = Optional
             .ofNullable(System.getenv("TERMINUS_CUSTOM_DEBUG_KEY"))
             .orElse("trantor-debug-key");

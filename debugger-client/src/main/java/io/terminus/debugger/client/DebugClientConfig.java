@@ -33,10 +33,13 @@ public class DebugClientConfig {
     }
 
 
-    @Bean
+    @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(RequestInterceptor.class)
-    public FeignDebugInterceptor feignDebugInterceptor() {
-        return new FeignDebugInterceptor();
+    static class FeignConfig {
+        @Bean
+        public FeignDebugInterceptor feignDebugInterceptor() {
+            return new FeignDebugInterceptor();
+        }
     }
 
 }
