@@ -79,9 +79,7 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
     private void localDebug(AsyncContext asyncContext, HttpServletRequest request, HttpServletResponse response) {
         // 1. 将 http request 透传给隧道服务
         HttpTunnelMessage tunnelMessage = convertRequest(request);
-        TunnelRequest tunnelRequest = TunnelRequest.wrapMessage(
-                getInstanceReq()
-                , tunnelMessage);
+        TunnelRequest tunnelRequest = TunnelRequest.wrapMessage(getInstanceReq(), tunnelMessage);
 
         // 2. 将 http response 响应给正常请求
         // 这里得异步处理，避免阻塞http线程， 本身底层webClient的实现就是非阻塞的，应该还好

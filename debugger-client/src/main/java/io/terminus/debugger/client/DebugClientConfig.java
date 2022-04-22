@@ -1,9 +1,12 @@
 package io.terminus.debugger.client;
 
+import feign.RequestInterceptor;
 import io.terminus.debugger.client.core.DebugClient;
 import io.terminus.debugger.client.core.DebuggerInstanceProvider;
 import io.terminus.debugger.client.core.LocalDebugProperties;
+import io.terminus.debugger.client.http.FeignDebugInterceptor;
 import io.terminus.debugger.client.http.HttpDebugInterceptor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +30,13 @@ public class DebugClientConfig {
         registrationBean.addUrlPatterns("*");
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registrationBean;
+    }
+
+
+    @Bean
+    @ConditionalOnClass(RequestInterceptor.class)
+    public FeignDebugInterceptor feignDebugInterceptor() {
+        return new FeignDebugInterceptor();
     }
 
 }
