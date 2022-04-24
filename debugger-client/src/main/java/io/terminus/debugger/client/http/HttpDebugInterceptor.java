@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 import static io.terminus.debugger.client.core.DebugKeyContext.DEBUG_KEY;
 
@@ -101,7 +102,11 @@ public class HttpDebugInterceptor extends OncePerRequestFilter implements DebugI
                 .onErrorResume(e -> {
                     HttpTunnelResponse r = new HttpTunnelResponse();
                     r.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                    r.setBody("waiting debug response timeout".getBytes(StandardCharsets.UTF_8));
+                    if (e instanceof TimeoutException) {
+                        r.setBody("waiting debug response timeout".getBytes(StandardCharsets.UTF_8));
+                    } else {
+                        r.setBody(e.getMessage().getBytes(StandardCharsets.UTF_8));
+                    }
                     return Mono.just(r);
                 })
                 .doFinally(s -> asyncContext.complete())
