@@ -1,5 +1,6 @@
 package io.terminus.debugger.client.tunnel;
 
+import io.rsocket.core.RSocketClient;
 import io.terminus.debugger.client.core.DebuggerInstanceProvider;
 import io.terminus.debugger.client.core.LocalDebugProperties;
 import io.terminus.debugger.common.tunnel.RouteConstants;
@@ -78,14 +79,14 @@ public class ClientTunnel {
      */
     private void triggerReconnect() {
         Flux.interval(Duration.ofSeconds(5), Schedulers.newParallel("debugger-reconnect", 1))
-                // 这样发生错误之后， interval 还能继续
+                // 内部会catch这样发生错误之后， interval 还能继续
                 .flatMap(this::pingWithCatch)
                 .subscribe();
     }
 
-    // 响应 0 表示连接不成功
+    // 响应无报错的 Mono, 0 表示连接不成功
     private Mono<Integer> pingWithCatch(long v) {
-        if (requester.isDisposed()) {
+        if (requester.rsocketClient().isDisposed()) {
             return Mono.just(0);
         }
         return this.requester.route(RouteConstants.PING)
@@ -105,9 +106,10 @@ public class ClientTunnel {
     // 貌似不用加这个服务端也能感知到 close, 神奇了
     @PreDestroy
     public void destroy() {
-        log.info("dispose {}", requester.isDisposed());
-        if (!requester.isDisposed()) {
-            requester.dispose();
+        RSocketClient client = requester.rsocketClient();
+        log.info("dispose {}", client.isDisposed());
+        if (!client.isDisposed()) {
+            client.dispose();
         }
     }
 

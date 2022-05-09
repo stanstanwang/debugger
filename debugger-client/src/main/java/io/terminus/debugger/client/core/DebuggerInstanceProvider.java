@@ -2,6 +2,7 @@ package io.terminus.debugger.client.core;
 
 import io.terminus.debugger.client.util.MacAddressUtil;
 import io.terminus.debugger.common.registry.DebuggerInstance;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
  * @date 2022/4/7
  */
 @Component
+@Slf4j
 public class DebuggerInstanceProvider implements ApplicationContextAware {
 
     private final String debugKey;
@@ -31,7 +33,7 @@ public class DebuggerInstanceProvider implements ApplicationContextAware {
         if (!StringUtils.hasLength(debugKey)) {
             throw new IllegalArgumentException("debugKey not exists, try to config by `LocalDebugProperties.debugKey`");
         }
-
+        log.info("**** local debug key is {}", debugKey);
         this.debugKey = debugKey;
     }
 

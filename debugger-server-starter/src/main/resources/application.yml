@@ -1,9 +1,9 @@
 spring:
   rsocket:
     server:
-      port: 7000
+      port: ${TUNNEL_PORT:7000}
 server:
-  port: 8710
+  port: ${HTTP_PORT:8710}
 # debug: true
 
 logging:

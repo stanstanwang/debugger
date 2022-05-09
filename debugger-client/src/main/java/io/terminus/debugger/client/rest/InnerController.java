@@ -1,5 +1,6 @@
 package io.terminus.debugger.client.rest;
 
+import io.terminus.debugger.client.core.DebuggerInstanceProvider;
 import io.terminus.debugger.client.tunnel.ClientTunnel;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,8 +22,20 @@ public class InnerController {
 
     private final ClientTunnel clientTunnel;
 
-    public InnerController(Optional<ClientTunnel> clientTunnel) {
+    private final DebuggerInstanceProvider debuggerInstanceProvider;
+
+
+    public InnerController(Optional<ClientTunnel> clientTunnel, DebuggerInstanceProvider debuggerInstanceProvider) {
         this.clientTunnel = clientTunnel.orElse(null);
+        this.debuggerInstanceProvider = debuggerInstanceProvider;
+    }
+
+    /**
+     * 获取当前的debugKey
+     */
+    @GetMapping("/debugKey")
+    public Mono<String> debugKey() {
+        return Mono.just(debuggerInstanceProvider.getDebugKey());
     }
 
     /**
@@ -38,6 +51,7 @@ public class InnerController {
                 .data(System.currentTimeMillis())
                 .retrieveMono(Long.class);
     }
+
 
     @GetMapping("/dispose")
     public Mono<Long> dispose() {

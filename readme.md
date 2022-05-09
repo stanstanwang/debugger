@@ -32,5 +32,6 @@ TODO， 具体用法完善。
 本地和远程服务需要配置 `spring.application.name` , 这样才能找到对应的服务路由到本地。
 
 ## 后续规划
+- 支持dubbo， 新规划大家都用dubbo了，这个支持有必要。
 - debuggerServer 也可以做代理转发一些线上请求，避免客户端需要依赖很多东西，比如数据库/uc/mq等。
 - 简化接入方式，不用运行时对localdebug jar的强依赖， 或者可以agent的接入方式
