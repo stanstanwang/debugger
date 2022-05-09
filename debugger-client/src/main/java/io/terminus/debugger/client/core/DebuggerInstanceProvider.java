@@ -24,6 +24,9 @@ public class DebuggerInstanceProvider implements ApplicationContextAware {
     private DebuggerInstance instance;
 
 
+    // 0.5 TODO stan 2022/4/27 提供 debugKey 的获取
+    // 1 TODO stan 2022/4/27 禁用注册中心的注册
+    // 1 TODO stan 2022/4/27 验证常规的debug场景，参考大嘿那里
     public DebuggerInstanceProvider(LocalDebugProperties debugProperties) {
         String debugKey = debugProperties.getDebugKey();
         if (!StringUtils.hasLength(debugKey)) {
