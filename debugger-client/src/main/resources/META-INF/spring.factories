@@ -1,2 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
     io.terminus.debugger.client.DebugClientConfig
+org.springframework.boot.env.EnvironmentPostProcessor=\
+    io.terminus.debugger.client.DisableRegisterEnvProcessor

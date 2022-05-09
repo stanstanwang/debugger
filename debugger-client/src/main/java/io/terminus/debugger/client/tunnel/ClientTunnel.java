@@ -78,12 +78,12 @@ public class ClientTunnel {
      */
     private void triggerReconnect() {
         Flux.interval(Duration.ofSeconds(5), Schedulers.newParallel("debugger-reconnect", 1))
-                // 这样发生错误之后， interval 还能继续
+                // 内部会catch这样发生错误之后， interval 还能继续
                 .flatMap(this::pingWithCatch)
                 .subscribe();
     }
 
-    // 响应 0 表示连接不成功
+    // 响应无报错的 Mono, 0 表示连接不成功
     private Mono<Integer> pingWithCatch(long v) {
         if (requester.isDisposed()) {
             return Mono.just(0);
