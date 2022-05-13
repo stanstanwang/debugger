@@ -19,6 +19,7 @@ import reactor.util.retry.Retry;
 import javax.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 位于客户端的隧道口子， 负责与服务端通信。
@@ -93,7 +94,11 @@ public class ClientTunnel {
                 .retrieveMono(Integer.class)
                 .timeout(Duration.ofSeconds(3))
                 .onErrorResume(e -> {
-                    log.error("triggerReconnect error", e);
+                    if(e instanceof TimeoutException) {
+                        log.warn("ping timeout");
+                    } else {
+                        log.error("triggerReconnect error", e);
+                    }
                     return Mono.just(0);
                 });
     }
