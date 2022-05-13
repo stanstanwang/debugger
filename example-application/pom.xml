@@ -16,7 +16,7 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
-    <profiles>
+    <!--<profiles>
         <profile>
             <id>debug</id>
             <activation>
@@ -30,7 +30,24 @@
                 </dependency>
             </dependencies>
         </profile>
-    </profiles>
+    </profiles>-->
+
+    <dependencies>
+        <dependency>
+            <groupId>io.terminus.debugger</groupId>
+            <artifactId>debugger-client</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-rsocket</artifactId>
+        </dependency>
+    </dependencies>
+
 
     <!--<build>
         <plugins>
